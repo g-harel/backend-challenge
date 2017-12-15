@@ -1,3 +1,9 @@
+# Running
+
+```shell
+$ go run cmd/validate/main.go
+```
+
 # Backend Intern Challenge - Summer 2018
 
 ## Problem

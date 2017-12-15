@@ -10,8 +10,10 @@ import (
 	"github.com/g-harel/shopify-challenge/internal/validator"
 )
 
-var url = "https://backend-challenge-summer-2018.herokuapp.com/challenges.json?id=1"
-var maxDepth = 4
+var (
+	url      = "https://backend-challenge-summer-2018.herokuapp.com/challenges.json?id=1"
+	maxDepth = 4
+)
 
 func main() {
 	var menus []*menu.Menu
