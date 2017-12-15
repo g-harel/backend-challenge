@@ -37,7 +37,7 @@ func check(mm menuMap, members flagMap, maxDepth, id, depth int) bool {
 
 // Validate checks a slice of menus for cycles.
 func Validate(menus []*menu.Menu, maxDepth int) ValidationResult {
-	// Creating a map from the menu slice for quicker access.
+	// Creating a map from the menus for direct access using IDs.
 	mm := make(menuMap)
 	for _, m := range menus {
 		mm[m.ID] = m
@@ -54,7 +54,7 @@ func Validate(menus []*menu.Menu, maxDepth int) ValidationResult {
 		}
 
 		members := make(flagMap)
-		if !check(mm, members, maxDepth, m.ID, 0) {
+		if !check(mm, members, maxDepth, m.ID, 1) {
 			continue
 		}
 

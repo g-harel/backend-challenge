@@ -39,8 +39,6 @@ func fetchPage(url string, page int) (*apiResponse, error) {
 	query.Add("page", strconv.Itoa(page))
 	req.URL.RawQuery = query.Encode()
 
-	fmt.Println(req.URL.String())
-
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -74,6 +72,9 @@ func Fetch(url string) ([]*menu.Menu, error) {
 
 	totalMenus := float64(page.Pagination.Total)
 	perPage := float64(page.Pagination.PerPage)
+	if perPage == 0 {
+		return nil, fmt.Errorf("division by zero")
+	}
 	totalPages := int(math.Ceil(totalMenus / perPage))
 
 	// Remaining page fetches are done in parallel.
