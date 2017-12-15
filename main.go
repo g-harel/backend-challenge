@@ -121,7 +121,7 @@ func main() {
 	}
 
 	res := validator.Validate(menus, 4)
-	j, err := json.MarshalIndent(res, "#", "  ")
+	j, err := json.MarshalIndent(res, "", "  ")
 	if err != nil {
 		log.Fatal(err)
 	}
