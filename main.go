@@ -1,111 +1,129 @@
 package main
 
 import (
-	"sync"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"math"
-	"net/http"
-	"strconv"
-	"time"
+
+	"github.com/g-harel/shopify-challenge/internal/fetcher"
+	"github.com/g-harel/shopify-challenge/internal/menu"
+	"github.com/g-harel/shopify-challenge/internal/validator"
 )
 
-type Menu struct {
-	ID       int    `json:"id"`
-	Data     string `json:"data"`
-	ParentID int   `json:"parent_id"`
-	ChildIDs []int  `json:"child_ids"`
-}
+var url = "https://backend-challenge-summer-2018.herokuapp.com/challenges.json?id=2"
 
-type Pagination struct {
-	CurrentPage int `json:"current_page"`
-	PerPage     int `json:"per_page"`
-	Total       int `json:"total"`
-}
+var dry = true
 
-type APIResponse struct {
-	Menus      []Menu     `json:"menus"`
-	Pagination Pagination `json:"pagination"`
-}
-
-func getPage(url string, page int) (*APIResponse, error) {
-	client := &http.Client{
-		Timeout: time.Second * 10,
-	}
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	query := req.URL.Query()
-	query.Add("page", strconv.Itoa(page))
-	req.URL.RawQuery = query.Encode()
-
-	fmt.Println(req.URL.String())
-
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	r := &APIResponse{}
-	err = json.Unmarshal(body, r)
-	if err != nil {
-		return nil, err
-	}
-
-	return r, nil
-}
-
-func getMenus(url string) ([]Menu, error) {
-	menus := []Menu{}
-
-	page, err := getPage(url, 1)
-	if err != nil {
-		return nil, err
-	}
-	menus = append(menus, page.Menus...)
-
-	totalMenus := float64(page.Pagination.Total)
-	perPage := float64(page.Pagination.PerPage)
-	totalPages := int(math.Ceil(totalMenus / perPage))
-
-	wg := sync.WaitGroup{}
-	mux := sync.Mutex{}
-
-	for i := 1; i < totalPages; i++ {
-		wg.Add(1)
-		go func(index int) {
-			defer wg.Done()
-			page, err := getPage(url, index + 1)
-			if err != nil {
-				fmt.Println(err)
-			}
-			mux.Lock()
-			menus = append(menus, page.Menus...)
-			mux.Unlock()
-		}(i)
-	}
-
-	wg.Wait()
-
-	return menus, nil
+var dummyMenus1 = []*menu.Menu{
+	&menu.Menu{
+		ID:       1,
+		Data:     "House",
+		ParentID: 0,
+		ChildIDs: []int{3},
+	},
+	&menu.Menu{
+		ID:       2,
+		Data:     "Company",
+		ParentID: 0,
+		ChildIDs: []int{4, 5, 8},
+	},
+	&menu.Menu{
+		ID:       3,
+		Data:     "Living Room",
+		ParentID: 1,
+		ChildIDs: []int{7},
+	},
+	&menu.Menu{
+		ID:       4,
+		Data:     "Meeting Rooms",
+		ParentID: 2,
+		ChildIDs: []int{},
+	},
+	&menu.Menu{
+		ID:       5,
+		Data:     "Kitchen",
+		ParentID: 2,
+		ChildIDs: []int{6},
+	},
+	&menu.Menu{
+		ID:       6,
+		Data:     "Oven",
+		ParentID: 5,
+		ChildIDs: []int{},
+	},
+	&menu.Menu{
+		ID:       7,
+		Data:     "Table",
+		ParentID: 3,
+		ChildIDs: []int{15},
+	},
+	&menu.Menu{
+		ID:       8,
+		Data:     "HR",
+		ParentID: 2,
+		ChildIDs: []int{},
+	},
+	&menu.Menu{
+		ID:       9,
+		Data:     "Computer",
+		ParentID: 0,
+		ChildIDs: []int{10, 11, 12},
+	},
+	&menu.Menu{
+		ID:       10,
+		Data:     "CPU",
+		ParentID: 9,
+		ChildIDs: []int{},
+	},
+	&menu.Menu{
+		ID:       11,
+		Data:     "Motherboard",
+		ParentID: 9,
+		ChildIDs: []int{},
+	},
+	&menu.Menu{
+		ID:       12,
+		Data:     "Peripherals",
+		ParentID: 9,
+		ChildIDs: []int{13, 14},
+	},
+	&menu.Menu{
+		ID:       13,
+		Data:     "Mouse",
+		ParentID: 12,
+		ChildIDs: []int{},
+	},
+	&menu.Menu{
+		ID:       14,
+		Data:     "Keyboard",
+		ParentID: 12,
+		ChildIDs: []int{},
+	},
+	&menu.Menu{
+		ID:       15,
+		Data:     "Chair",
+		ParentID: 7,
+		ChildIDs: []int{1},
+	},
 }
 
 func main() {
-	menus, err := getMenus("https://backend-challenge-summer-2018.herokuapp.com/challenges.json?id=2")
+	var menus []*menu.Menu
+
+	if !dry {
+		m, err := fetcher.Fetch(url)
+		if err != nil {
+			log.Fatal(err)
+		}
+		menus = m
+	} else {
+		menus = dummyMenus1
+	}
+
+	res := validator.Validate(menus, 4)
+	j, err := json.MarshalIndent(res, "#", "  ")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Printf("%+v\n", menus)
+	fmt.Println(string(j))
 }
