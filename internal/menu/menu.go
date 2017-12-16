@@ -8,6 +8,7 @@ type Menu struct {
 	ChildIDs []int  `json:"child_ids"`
 }
 
+// CheckedMenu holds information about a validated menu item.
 type CheckedMenu struct {
 	RootID   int   `json:"root_id"`
 	Children []int `json:"children"`
