@@ -7,15 +7,21 @@ type flagMap map[int]bool
 
 // ValidationResult defines the status of menus as either valid or invalid.
 type ValidationResult struct {
-	ValidMenus   []*menu.CheckedMenu `json:"valid_menus"`
-	InvalidMenus []*menu.CheckedMenu `json:"invalid_menus"`
+	ValidMenus   []*CheckedRoot `json:"valid_menus"`
+	InvalidMenus []*CheckedRoot `json:"invalid_menus"`
+}
+
+// CheckedRoot holds information about a validated menu item.
+type CheckedRoot struct {
+	RootID   int   `json:"root_id"`
+	Children []int `json:"children"`
 }
 
 // Recursively travels down the tree of menus to check that there are no
 // cycles and that no menu is located deeper than the max depth. It also
 // keeps track of travelled menu IDs in the members map which is available
 // by reference to the caller.
-func check(mm menuMap, members flagMap, maxDepth, id, depth int) bool {
+func check(menus menuMap, members flagMap, maxDepth, id, depth int) bool {
 	if depth > maxDepth {
 		return false
 	}
@@ -26,8 +32,8 @@ func check(mm menuMap, members flagMap, maxDepth, id, depth int) bool {
 	members[id] = true
 	depth++
 
-	for _, childID := range mm[id].ChildIDs {
-		if !check(mm, members, maxDepth, childID, depth) {
+	for _, childID := range menus[id].ChildIDs {
+		if !check(menus, members, maxDepth, childID, depth) {
 			return false
 		}
 	}
@@ -35,47 +41,43 @@ func check(mm menuMap, members flagMap, maxDepth, id, depth int) bool {
 	return true
 }
 
-// Validate checks a list of menus for cycles.
+// Validate checks a list of menus for cycles and depth.
 func Validate(menus []*menu.Menu, maxDepth int) ValidationResult {
+	result := ValidationResult{}
+
 	// Creating a map from the menus for direct access using IDs.
 	mm := make(menuMap)
 	for _, m := range menus {
 		mm[m.ID] = m
 	}
 
-	// Marking all valid menus IDs.
-	valid := make(flagMap)
 	for _, m := range menus {
-		// Only checking the validity from "root" menus with no parents.
-		// It is assumed that menus with no root menu in their ancestry
-		// are part of a cycle.
+		// Only checking root nodes' validity.
 		if m.HasParent() {
 			continue
 		}
 
 		members := make(flagMap)
-		if !check(mm, members, maxDepth, m.ID, 1) {
-			continue
-		}
+		valid := check(mm, members, maxDepth, m.ID, 1)
 
-		// All the members of a valid menu tree are also considered valid.
-		// For this assumption to hold, the menus cannot have multiple parents.
+		var membersList []int
 		for id := range members {
-			valid[id] = true
+			// The root's id should not be included in the list
+			// of its own children even if it was traversed.
+			if id == m.ID {
+				continue
+			}
+			membersList = append(membersList, id)
 		}
-	}
 
-	result := ValidationResult{}
-	for _, m := range menus {
-		cm := &menu.CheckedMenu{
+		cr := &CheckedRoot{
 			RootID:   m.ID,
-			Children: m.ChildIDs,
+			Children: membersList,
 		}
-
-		if valid[m.ID] {
-			result.ValidMenus = append(result.ValidMenus, cm)
+		if valid {
+			result.ValidMenus = append(result.ValidMenus, cr)
 		} else {
-			result.InvalidMenus = append(result.InvalidMenus, cm)
+			result.InvalidMenus = append(result.InvalidMenus, cr)
 		}
 	}
 

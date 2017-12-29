@@ -78,17 +78,17 @@ func Fetch(url string) ([]*menu.Menu, error) {
 	totalPages := int(math.Ceil(totalMenus / perPage))
 
 	// Remaining page fetches are done in parallel.
-	ch := make(chan *apiResponse)
+	res := make(chan *apiResponse)
 	errs := make(chan error)
-	for i := 1; i < totalPages; i++ {
+	for i := 2; i <= totalPages; i++ {
 		go func(index int) {
-			page, err := fetchPage(url, index+1)
-			ch <- page
+			page, err := fetchPage(url, index)
+			res <- page
 			errs <- err
 		}(i)
 	}
 	for i := 1; i < totalPages; i++ {
-		page := <-ch
+		page := <-res
 		err := <-errs
 		if err != nil {
 			return nil, err

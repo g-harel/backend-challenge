@@ -8,15 +8,10 @@ type Menu struct {
 	ChildIDs []int  `json:"child_ids"`
 }
 
-// CheckedMenu holds information about a validated menu item.
-type CheckedMenu struct {
-	RootID   int   `json:"root_id"`
-	Children []int `json:"children"`
-}
-
 // HasParent indicates whether or not the Menu has a parent.
 func (m *Menu) HasParent() bool {
-	// A value of zero represents an unmarshalled null value. (from json.Unmarshall)
-	// Currently, the API only returns menus with an index larger than zero.
+	// The endpoint never returns menus with ids of 0 at this time. This means
+	// that a zero value can only be the product of the json to struct conversion
+	// (json.Unmarshall) where a null integer value becomes the default int (0).
 	return m.ParentID != 0
 }
